@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notes Page</title>
+  </head>
+  <body>
+    <h1>Notes Creation</h1>
+    <h2 id="user-name"></h2>
+    <div>
+      <form id="notesForm">
+        <input type="text" id="title" placeholder="Enter title" />
+        <input type="text" id="body" placeholder="Enter body" />
+        <button id="submitBtn" type="submit">ADD</button>
+      </form>
+      <div id="container"></div>
+    </div>
+  </body>
+</html>
+<script>
+  let token = localStorage.getItem("token");
+  let container = document.getElementById("container");
+  let noteFormMode = "ADD";
+  let noteIdToUpdate = null;
+
+  const fetchData = () => {
+    fetch("https://drab-pink-ant-tux.cyclic.app/note/", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `bearer ${token} `,
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        let usernameDisplay = document.getElementById("user-name");
+        usernameDisplay.innerText = `Hello ${res.data.name}`;
+
+        let arr = res.data.notes;
+        let displayCard = arr.map((el, i) => {
+          return displayData(el.title, el.body, el._id);
+        });
+        container.innerHTML = displayCard.join(" ");
+        deleteNotes();
+        updateNote();
+      })
+      .catch((err) => console.log(err));
+  };
+  fetchData();
+
+  function displayData(title, body, id) {
+    let card = `<div class="card">
+        <p>${title}<p>
+        <h3>${body}<h3>
+        <button class="updateBtn" data-id=${id}>Update</button>
+        <button class="deleteBtn" data-id=${id}>Delete</button>
+        </div>`;
+
+    return card;
+  }
+
+  let form = document.getElementById("notesForm");
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    // let submitBtn = document.getElementById("submitBtn")
+    addNotes();
+  });
+
+  function addNotes() {
+    let title = document.getElementById("title").value;
+    let body = document.getElementById("body").value;
+
+    let notes = {
+      title: title,
+      body: body,
+    };
+
+    if (noteFormMode === "ADD") {
+      fetch("https://drab-pink-ant-tux.cyclic.app/note/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `bearer ${token} `,
+        },
+        body: JSON.stringify(notes),
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          console.log(res);
+          fetchData();
+        });
+    } else if (noteFormMode === "UPDATE" && noteIdToUpdate) {
+      fetch(
+        `https://drab-pink-ant-tux.cyclic.app/note/update/${noteIdToUpdate}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            authorization: `bearer ${token} `,
+          },
+          body: JSON.stringify(notes),
+        }
+      )
+        .then((res) => res.json())
+        .then((res) => {
+          cd;
+          console.log(res);
+          fetchData();
+        });
+    }
+  }
+
+  function deleteNotes() {
+    let deleteBtn = document.querySelectorAll(".deleteBtn");
+    console.log(deleteBtn);
+
+    deleteBtn.forEach((el, i) => {
+      el.addEventListener("click", () => {
+        let deleteId = el.dataset.id;
+
+        fetch(`https://drab-pink-ant-tux.cyclic.app/note/delete/${deleteId}`, {
+          method: "DELETE",
+          headers: {
+            authorization: `bearer ${token} `,
+          },
+        })
+          .then((res) => res.json())
+          .then((res) => {
+            console.log(res);
+            fetchData();
+          })
+          .catch((err) => console.log(err));
+      });
+    });
+  }
+
+  function updateNote() {
+    let updateBtn = document.querySelectorAll(".updateBtn");
+
+    updateBtn.forEach((el, i) => {
+      el.addEventListener("click", () => {
+        let updateId = el.dataset.id;
+        fillForm(updateId);
+      });
+    });
+  }
+
+  function fillForm(id) {
+    noteFormMode = "UPDATE";
+    let submitBtn = document.getElementById("submitBtn");
+    submitBtn.textContent = "UPDATE";
+    let title = document.getElementById("title");
+    let body = document.getElementById("body");
+    fetch(`https://drab-pink-ant-tux.cyclic.app/note/${id}`, {
+      headers: {
+        authorization: `bearer ${token} `,
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        title.value = res.title;
+        body.value = res.body;
+        noteIdToUpdate = res._id;
+      })
+      .catch((err) => console.log(err));
+  }
+</script>
